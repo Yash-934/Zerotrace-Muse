@@ -1,0 +1,56 @@
+[package]
+name = "zerotrace-core"
+version = "0.1.0"
+edition = "2021"
+description = "ZeroTrace Messenger security core: hybrid post-quantum identity, PQXDH-Sync handshake, Double Ratchet + per-step ML-KEM, Tor transport interface"
+license = "Apache-2.0"
+
+[lib]
+name = "zerotrace_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# Arti-based Tor transport. Disabled by default because the Arti dependency tree is
+# large and its onion-service API is still moving (see docs/DEPENDENCIES.md).
+# With this feature off, Tor reports ERROR and messaging fails closed.
+tor = ["arti-client/onion-service-client", "arti-client/onion-service-service", "arti-client/tokio", "tokio", "tor-rtcompat", "dep:tor-hsservice", "dep:tor-cell", "dep:futures", "dep:safelog"]
+
+[dependencies]
+# --- Post-quantum, FIPS 203 / FIPS 204 (RustCrypto). NOT independently audited:
+# see docs/DEPENDENCIES.md and LIMITATIONS.md. Do not use pqc_kyber (KyberSlash).
+ml-kem = "0.2"
+ml-dsa = "0.1"
+# --- Classical
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+chacha20poly1305 = "0.10"
+hkdf = "0.12"
+hmac = "0.12"
+sha2 = "0.10"
+zeroize = { version = "1.8", features = ["derive"] }
+rand = "0.8"
+getrandom = { version = "0.2", features = ["js"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+hex = "0.4"
+jni = "0.21"
+# Direct dep for the KEM traits (ml-kem re-exports them only privately).
+kem = "=0.3.0-pre.0"
+
+# --- Tor (optional, feature-gated)
+arti-client = { version = "0.48", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+tor-rtcompat = { version = "0.48", optional = true }
+tor-hsservice = { version = "0.48", optional = true }
+tor-cell = { version = "0.48", optional = true }
+futures = { version = "0.3", optional = true }
+safelog = { version = "0.10", optional = true }
+
+[dev-dependencies]
+hex = "0.4"
+
+[profile.release]
+lto = true
+codegen-units = 1

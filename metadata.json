@@ -1,0 +1,6 @@
+{
+  "name": "ZeroTrace",
+  "description": "Private 1:1 messaging over Tor onion services with hybrid post-quantum E2EE and RAM-only ephemeral conversations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

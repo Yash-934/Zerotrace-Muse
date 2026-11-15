@@ -1,0 +1,27 @@
+[package]
+name = "zerotrace-core-fuzz"
+version = "0.1.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+zerotrace-core = { path = ".." }
+
+# Prevent this from interfering with the main workspace build.
+[workspace]
+
+[[bin]]
+name = "qr_parse"
+path = "fuzz_targets/qr_parse.rs"
+
+[[bin]]
+name = "handshake_init"
+path = "fuzz_targets/handshake_init.rs"
+
+[[bin]]
+name = "ratchet_decrypt"
+path = "fuzz_targets/ratchet_decrypt.rs"
