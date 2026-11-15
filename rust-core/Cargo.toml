@@ -14,7 +14,7 @@ default = []
 # Arti-based Tor transport. Disabled by default because the Arti dependency tree is
 # large and its onion-service API is still moving (see docs/DEPENDENCIES.md).
 # With this feature off, Tor reports ERROR and messaging fails closed.
-tor = ["arti-client/onion-service-client", "arti-client/onion-service-service", "arti-client/tokio", "tokio", "tor-rtcompat", "dep:tor-hsservice", "dep:tor-cell", "dep:futures", "dep:safelog"]
+tor = ["arti-client/onion-service-client", "arti-client/onion-service-service", "arti-client/tokio", "arti-client/static", "tokio", "tor-rtcompat", "dep:tor-hsservice", "dep:tor-cell", "dep:futures", "dep:safelog"]
 
 [dependencies]
 # --- Post-quantum, FIPS 203 / FIPS 204 (RustCrypto). NOT independently audited:

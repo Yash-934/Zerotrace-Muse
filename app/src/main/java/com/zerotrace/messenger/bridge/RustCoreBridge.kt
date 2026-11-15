@@ -91,6 +91,9 @@ object RustCoreBridge {
     private val nextHandle = AtomicLong(1L)
 
     @Volatile
+    private var fallbackTorActive: Boolean = false
+
+    @Volatile
     private var currentTorState: TorState = TorState.OFFLINE
 
     @Volatile
@@ -334,7 +337,7 @@ object RustCoreBridge {
     }
 
     fun nativeBundleSend(onionAddress: String, frameType: Int, data: ByteArray): Boolean {
-        if (nativeLoaded) {
+        if (nativeLoaded && !fallbackTorActive) {
             return runCatching { jniBundleSend(onionAddress, frameType, data) }.getOrDefault(false)
         }
         if (currentTorState == TorState.OFFLINE || currentTorState == TorState.ERROR) return false
@@ -371,7 +374,7 @@ object RustCoreBridge {
     }
 
     fun nativeBundlePoll(): ByteArray? {
-        if (nativeLoaded) {
+        if (nativeLoaded && !fallbackTorActive) {
             return runCatching { jniBundlePoll() }.getOrNull()
         }
         return bundleInbound.poll()
@@ -538,15 +541,18 @@ object RustCoreBridge {
     }
 
     fun nativeTransportSend(handle: Long, ciphertext: ByteArray): Boolean {
-        if (nativeLoaded) {
+        if (nativeLoaded && !fallbackTorActive) {
             return runCatching { jniTransportSend(handle, ciphertext) }.getOrDefault(false)
+        }
+        if (nativeLoaded && fallbackTorActive) {
+            return currentTorState != TorState.OFFLINE && currentTorState != TorState.ERROR
         }
         val s = sessions[handle] ?: return false
         return s.ready && currentTorState != TorState.OFFLINE && currentTorState != TorState.ERROR
     }
 
     fun nativeTransportPoll(handle: Long): ByteArray? {
-        if (nativeLoaded) {
+        if (nativeLoaded && !fallbackTorActive) {
             return runCatching { jniTransportPoll(handle) }.getOrNull()
         }
         return sessions[handle]?.inbound?.poll()
@@ -554,8 +560,13 @@ object RustCoreBridge {
 
     fun nativeTorStart(stateDir: String): String {
         if (nativeLoaded) {
-            return runCatching { jniTorStart(stateDir) }.getOrDefault("ERROR")
+            val res = runCatching { jniTorStart(stateDir) }.getOrDefault("ERROR")
+            if (res != "ERROR") {
+                fallbackTorActive = false
+                return res
+            }
         }
+        fallbackTorActive = true
         currentTorState = TorState.INITIALIZING
         val dirFile = File(stateDir).apply { mkdirs() }
         val hostSeedFile = File(dirFile, "onion_seed.bin")
@@ -573,24 +584,26 @@ object RustCoreBridge {
     }
 
     fun nativeTorState(): String {
-        if (nativeLoaded) {
-            return runCatching { jniTorState() }.getOrDefault("ERROR")
+        if (nativeLoaded && !fallbackTorActive) {
+            val state = runCatching { jniTorState() }.getOrDefault("ERROR")
+            if (state != "ERROR") return state
         }
         return currentTorState.name
     }
 
     fun nativeOnionAddress(): String {
-        if (nativeLoaded) {
-            return runCatching { jniOnionAddress() }.getOrDefault("")
+        if (nativeLoaded && !fallbackTorActive) {
+            val addr = runCatching { jniOnionAddress() }.getOrDefault("")
+            if (addr.isNotEmpty()) return addr
         }
         return currentOnion
     }
 
     fun nativeTorStop() {
-        if (nativeLoaded) {
+        if (nativeLoaded && !fallbackTorActive) {
             runCatching { jniTorStop() }
-            return
         }
+        fallbackTorActive = false
         currentTorState = TorState.OFFLINE
         bundleInbound.clear()
         callEvents.clear()
